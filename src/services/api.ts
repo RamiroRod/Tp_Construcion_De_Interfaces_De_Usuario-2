@@ -1,5 +1,6 @@
 import type {
   Comment,
+  CreatePostPayload,
   FeedPost,
   Post,
   PostImage,
@@ -43,6 +44,34 @@ export function getPostImages(postId: number) {
 
 export function getVisibleComments(postId: number) {
   return request<Comment[]>(`/comments/post/${postId}`);
+}
+
+export async function createPost(
+  payload: CreatePostPayload
+): Promise<FeedPost> {
+  // map client payload keys to backend expectations: userId and tagIds
+  const body = {
+    description: payload.description,
+    userId: payload.UserId,
+    tagIds: payload.Tags ?? [],
+    ...(payload.title ? { title: payload.title } : {}),
+  };
+
+  const post = await request<Post>("/posts", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+
+  const [images, visibleComments] = await Promise.all([
+    getPostImages(post.id).catch(() => []),
+    getVisibleComments(post.id).catch(() => []),
+  ]);
+
+  return {
+    ...post,
+    images,
+    visibleComments,
+  };
 }
 
 export async function getFeedPosts(): Promise<FeedPost[]> {

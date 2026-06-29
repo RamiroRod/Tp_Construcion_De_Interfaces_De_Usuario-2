@@ -11,6 +11,13 @@ export interface RegisterUserPayload {
   email: string;
 }
 
+export interface CreatePostPayload {
+  title?: string;
+  description: string;
+  UserId: number;
+  Tags?: number[];
+}
+
 export interface Tag {
   id: number;
   name: string;
@@ -33,6 +40,7 @@ export interface Comment {
 
 export interface Post {
   id: number;
+  title?: string;
   description: string;
   UserId: number;
   createdAt?: string;

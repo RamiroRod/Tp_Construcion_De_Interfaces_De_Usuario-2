@@ -49,7 +49,29 @@ function NavBar() {
               </NavLink>
             </li>
 
-            {!isAuthenticated && (
+            {isAuthenticated ? (
+              <>
+                <li className="nav-item">
+                  <NavLink
+                    className="nav-link"
+                    to="/mis-publicaciones"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    Mis publicaciones
+                  </NavLink>
+                </li>
+
+                <li className="nav-item">
+                  <NavLink
+                    className="nav-link"
+                    to="/crear-publicacion"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    Hacer publicación
+                  </NavLink>
+                </li>
+              </>
+            ) : (
               <>
                 <li className="nav-item">
                   <NavLink

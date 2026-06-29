@@ -7,12 +7,18 @@ interface PostCardProps {
 
 function PostCard({ post }: PostCardProps) {
   const firstImage = post.images[0];
+  const apiUrl = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
+  const imageUrl = firstImage
+    ? firstImage.url.startsWith("http")
+      ? firstImage.url
+      : `${apiUrl}${firstImage.url}`
+    : null;
 
   return (
     <article className="card border-0 shadow-sm mb-4">
-      {firstImage && (
+      {firstImage && imageUrl && (
         <img
-          src={firstImage.url}
+          src={imageUrl}
           alt={`Imagen del post ${post.id}`}
           className="card-img-top post-image"
         />
