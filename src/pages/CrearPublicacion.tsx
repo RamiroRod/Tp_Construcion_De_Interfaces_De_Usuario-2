@@ -6,6 +6,9 @@ import { createPost } from "../services/api";
 function CrearPublicacion() {
   const { user } = useAuth();
   const [description, setDescription] = useState("");
+  const [images, setImages] = useState<File[]>([]);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [imageUrlInput, setImageUrlInput] = useState("");
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
@@ -15,13 +18,36 @@ function CrearPublicacion() {
   const handleImageChange = (event: ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files) {
+      setImages([]);
       setImagePreviews([]);
       return;
     }
 
     const selectedFiles = Array.from(files);
     const previews = selectedFiles.map((file) => URL.createObjectURL(file));
+    setImages(selectedFiles);
     setImagePreviews(previews);
+  };
+
+  const handleImageUrlChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setImageUrlInput(event.target.value);
+  };
+
+  const addImageUrl = () => {
+    const url = imageUrlInput.trim();
+    if (!url) return;
+    if (!/^https?:\/\//i.test(url)) {
+      setError("Ingresá una URL válida que comience con http:// o https://");
+      return;
+    }
+
+    setImageUrls((current) => [...current, url]);
+    setImageUrlInput("");
+    setError("");
+  };
+
+  const removeImageUrl = (index: number) => {
+    setImageUrls((current) => current.filter((_, idx) => idx !== index));
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -45,6 +71,8 @@ function CrearPublicacion() {
       await createPost({
         description,
         UserId: user.id,
+        images,
+        imageUrls,
       });
       navigate("/mis-publicaciones");
     } catch (err) {
@@ -118,6 +146,56 @@ function CrearPublicacion() {
                               className="card-img-top img-fluid"
                             />
                           </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="mb-4">
+                  <label className="form-label" htmlFor="imageUrl">
+                    URL de imagen
+                  </label>
+                  <div className="input-group">
+                    <input
+                      id="imageUrl"
+                      className="form-control"
+                      type="url"
+                      value={imageUrlInput}
+                      onChange={handleImageUrlChange}
+                      placeholder="https://example.com/imagen.jpg"
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-outline-facebook"
+                      onClick={addImageUrl}
+                    >
+                      Agregar URL
+                    </button>
+                  </div>
+                  <div className="form-text">
+                    También podés agregar imágenes usando URLs públicas.
+                  </div>
+                </div>
+
+                {imageUrls.length > 0 && (
+                  <div className="mb-4">
+                    <div className="d-flex flex-column gap-2">
+                      {imageUrls.map((url, index) => (
+                        <div
+                          key={index}
+                          className="d-flex align-items-center justify-content-between bg-light rounded p-2"
+                        >
+                          <span className="text-truncate" style={{ maxWidth: "85%" }}>
+                            {url}
+                          </span>
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-outline-danger"
+                            onClick={() => removeImageUrl(index)}
+                          >
+                            Eliminar
+                          </button>
                         </div>
                       ))}
                     </div>

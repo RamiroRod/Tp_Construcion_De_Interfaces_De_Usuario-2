@@ -16,6 +16,8 @@ export interface CreatePostPayload {
   description: string;
   UserId: number;
   Tags?: number[];
+  images?: File[];
+  imageUrls?: string[];
 }
 
 export interface Tag {

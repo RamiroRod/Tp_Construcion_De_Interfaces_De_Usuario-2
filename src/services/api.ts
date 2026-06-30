@@ -42,6 +42,44 @@ export function getPostImages(postId: number) {
   return request<PostImage[]>(`/postimages/post/${postId}`);
 }
 
+export function getImagenPostId(postId: number) {
+  return getPostImages(postId);
+}
+
+export async function uploadPostImages(
+  postId: number,
+  images: File[]
+): Promise<PostImage[]> {
+  const formData = new FormData();
+  formData.append("postId", String(postId));
+
+  images.forEach((image) => {
+    formData.append("images", image);
+  });
+
+  const response = await fetch(`${API_URL}/postimages`, {
+    method: "POST",
+    body: formData,
+  });
+
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(data?.error || data?.message || "Error al subir imágenes.");
+  }
+
+  return data as PostImage[];
+}
+
+export async function uploadPostImageUrls(
+  postId: number,
+  imageUrls: string[]
+): Promise<PostImage[]> {
+  return request<PostImage[]>(`/postimages`, {
+    method: "POST",
+    body: JSON.stringify({ postId, imageUrls }),
+  });
+}
+
 export function getVisibleComments(postId: number) {
   return request<Comment[]>(`/comments/post/${postId}`);
 }
@@ -62,14 +100,32 @@ export async function createPost(
     body: JSON.stringify(body),
   });
 
-  const [images, visibleComments] = await Promise.all([
-    getPostImages(post.id).catch(() => []),
+  let imagesPromise: Promise<PostImage[]>;
+
+  if (payload.images?.length || payload.imageUrls?.length) {
+    const uploads: Promise<PostImage[]>[] = [];
+
+    if (payload.images?.length) {
+      uploads.push(uploadPostImages(post.id, payload.images).catch(() => []));
+    }
+
+    if (payload.imageUrls?.length) {
+      uploads.push(uploadPostImageUrls(post.id, payload.imageUrls).catch(() => []));
+    }
+
+    imagesPromise = Promise.all(uploads).then((results) => results.flat());
+  } else {
+    imagesPromise = getImagenPostId(post.id).catch(() => []);
+  }
+
+  const [uploadedImages, visibleComments] = await Promise.all([
+    imagesPromise,
     getVisibleComments(post.id).catch(() => []),
   ]);
 
   return {
     ...post,
-    images,
+    images: uploadedImages,
     visibleComments,
   };
 }

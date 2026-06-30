@@ -1,17 +1,54 @@
 import { Link } from "react-router-dom";
-import type { FeedPost } from "../types";
+import { useEffect, useState } from "react";
+import { getImagenPostId } from "../services/api";
+import type { FeedPost, PostImage } from "../types";
 
 interface PostCardProps {
   post: FeedPost;
 }
 
 function PostCard({ post }: PostCardProps) {
-  const firstImage = post.images[0];
+  const [images, setImages] = useState<PostImage[]>(post.images);
   const apiUrl = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
-  const imageUrl = firstImage
-    ? firstImage.url.startsWith("http")
-      ? firstImage.url
-      : `${apiUrl}${firstImage.url}`
+
+  useEffect(() => {
+    let ignore = false;
+
+    if (post.images.length === 0) {
+      getImagenPostId(post.id)
+        .then((result) => {
+          if (!ignore) {
+            setImages(result);
+          }
+        })
+        .catch(() => {
+          if (!ignore) {
+            setImages([]);
+          }
+        });
+    }
+
+    return () => {
+      ignore = true;
+    };
+  }, [post.id, post.images.length]);
+
+  const firstImage = images[0];
+
+  const imageUrl = firstImage?.url
+    ? (() => {
+        const rawUrl = firstImage.url.trim().replace(/\\/g, "/");
+
+        if (/^https?:\/\//i.test(rawUrl)) {
+          return rawUrl;
+        }
+
+        if (rawUrl.startsWith("/")) {
+          return `${apiUrl}${rawUrl}`;
+        }
+
+        return `${apiUrl}/${rawUrl}`;
+      })()
     : null;
 
   return (
@@ -53,6 +90,27 @@ function PostCard({ post }: PostCardProps) {
               </span>
             ))}
           </div>
+        )}
+
+        {post.visibleComments.length > 0 ? (
+          <div className="mb-3">
+            <h3 className="h6 mb-2">Comentarios</h3>
+            <ul className="list-group list-group-flush">
+              {post.visibleComments.slice(0, 3).map((comment) => (
+                <li className="list-group-item px-0 py-2" key={comment.id}>
+                  <strong>{comment.User?.nickName ?? "Anónimo"}:</strong>{" "}
+                  <span>{comment.content}</span>
+                </li>
+              ))}
+              {post.visibleComments.length > 3 && (
+                <li className="list-group-item px-0 py-2 text-muted">
+                  y {post.visibleComments.length - 3} comentario(s) más...
+                </li>
+              )}
+            </ul>
+          </div>
+        ) : (
+          <div className="mb-3 text-muted">No hay comentarios visibles aún.</div>
         )}
 
         <Link to={`/post/${post.id}`} className="btn btn-facebook btn-sm">
