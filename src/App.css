@@ -1,6 +1,7 @@
 :root {
   --facebook-primary: #3b5998;
   --facebook-secondary: #8b9dc3;
+  --facebook-primary-hover: #2f477a;
   --facebook-soft: #dfe3ee;
   --facebook-page: #f7f7f7;
   --facebook-white: #ffffff;
@@ -65,8 +66,8 @@ body {
 
 .btn-google:hover,
 .btn-facebook:hover {
-  background-color: #2f477a;
-  border-color: #2f477a;
+  background-color: var(--facebook-primary-hover);
+  border-color: var(--facebook-primary-hover);
   color: var(--facebook-white);
 }
 
@@ -126,4 +127,26 @@ body {
 
 .google-color-bar span:nth-child(4) {
   background-color: var(--facebook-white);
+}
+
+.palette-preview {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.palette-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  display: inline-block;
+}
+
+.palette-swatch-primary {
+  background-color: var(--facebook-primary);
+}
+
+.palette-swatch-secondary {
+  background-color: var(--facebook-secondary);
 }
