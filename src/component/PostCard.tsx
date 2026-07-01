@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { getImagenPostId } from "../services/api";
+import { getPostImageUrls } from "../services/api";
 import type { FeedPost, PostImage } from "../types";
 
 interface PostCardProps {
@@ -8,14 +8,14 @@ interface PostCardProps {
 }
 
 function PostCard({ post }: PostCardProps) {
-  const [images, setImages] = useState<PostImage[]>(post.images);
+  const [images, setImages] = useState<PostImage[]>(post.images ?? []);
   const apiUrl = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
 
   useEffect(() => {
     let ignore = false;
 
-    if (post.images.length === 0) {
-      getImagenPostId(post.id)
+    if (!post.images || post.images.length === 0) {
+      getPostImageUrls(post.id)
         .then((result) => {
           if (!ignore) {
             setImages(result);
@@ -31,9 +31,10 @@ function PostCard({ post }: PostCardProps) {
     return () => {
       ignore = true;
     };
-  }, [post.id, post.images.length]);
+  }, [post.id, post.images?.length ?? 0]);
 
   const firstImage = images[0];
+  const visibleComments = post.visibleComments ?? [];
 
   const imageUrl = firstImage?.url
     ? (() => {
@@ -68,15 +69,11 @@ function PostCard({ post }: PostCardProps) {
               {post.User?.nickName ?? "Usuario desconocido"}
             </h2>
 
-            {post.createdAt && (
-              <small className="text-muted">
-                {new Date(post.createdAt).toLocaleDateString("es-AR")}
-              </small>
-            )}
+            
           </div>
 
           <span className="badge bg-soft-blue text-facebook">
-            {post.visibleComments.length} comentarios visibles
+            {visibleComments.length} comentarios visibles
           </span>
         </div>
 
@@ -92,19 +89,19 @@ function PostCard({ post }: PostCardProps) {
           </div>
         )}
 
-        {post.visibleComments.length > 0 ? (
+        {visibleComments.length > 0 ? (
           <div className="mb-3">
             <h3 className="h6 mb-2">Comentarios</h3>
             <ul className="list-group list-group-flush">
-              {post.visibleComments.slice(0, 3).map((comment) => (
+              {visibleComments.slice(0, 3).map((comment) => (
                 <li className="list-group-item px-0 py-2" key={comment.id}>
                   <strong>{comment.User?.nickName ?? "Anónimo"}:</strong>{" "}
                   <span>{comment.content}</span>
                 </li>
               ))}
-              {post.visibleComments.length > 3 && (
+              {visibleComments.length > 3 && (
                 <li className="list-group-item px-0 py-2 text-muted">
-                  y {post.visibleComments.length - 3} comentario(s) más...
+                  y {visibleComments.length - 3} comentario(s) más...
                 </li>
               )}
             </ul>

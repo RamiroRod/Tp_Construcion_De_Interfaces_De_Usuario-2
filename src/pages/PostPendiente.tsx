@@ -2,20 +2,20 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   getPostById,
-  getPostImages,
+  getPostImageUrls,
   getVisibleComments,
   createComment,
 } from "../services/api";
 import { useAuth } from "../context/AuthContext";
-import type { Post, PostImage, Comment } from "../types";
+import type { Post, Comment } from "../types";
 
 function PostPendiente() {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const postId = Number(id);
   const { user } = useAuth();
 
   const [post, setPost] = useState<Post | null>(null);
-  const [images, setImages] = useState<PostImage[]>([]);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
 
   const [nuevoComentario, setNuevoComentario] = useState("");
@@ -25,14 +25,13 @@ function PostPendiente() {
   useEffect(() => {
     async function cargarTodo() {
       try {
-        const [datosPost, datosImagenes, datosComentarios] =
-          await Promise.all([
-            getPostById(postId),
-            getPostImages(postId),
-            getVisibleComments(postId),
-          ]);
+        const [datosPost, datosImagenes, datosComentarios] = await Promise.all([
+          getPostById(postId),
+          getPostImageUrls(postId),
+          getVisibleComments(postId),
+        ]);
         setPost(datosPost);
-        setImages(datosImagenes);
+        setImageUrls(datosImagenes.map((image) => image.url));
         setComments(datosComentarios);
       } catch (err) {
         console.error(err);
@@ -58,8 +57,8 @@ function PostPendiente() {
     setError("");
     try {
       const comentarioCreado = await createComment({
-        PostId: postId,
-        UserId: user.id,
+        postId,
+        userId: user.id,
         content: nuevoComentario,
       });
       setComments((prev) => [...prev, comentarioCreado]);
@@ -98,12 +97,12 @@ function PostPendiente() {
             </div>
           )}
 
-          {images.length > 0 && (
+          {imageUrls.length > 0 && (
             <div className="row g-2 mb-3">
-              {images.map((img) => (
-                <div className="col-6 col-md-4" key={img.id}>
+              {imageUrls.map((url, index) => (
+                <div className="col-6 col-md-4" key={index}>
                   <img
-                    src={img.url}
+                    src={url}
                     alt="Imagen de la publicación"
                     className="img-fluid rounded"
                   />

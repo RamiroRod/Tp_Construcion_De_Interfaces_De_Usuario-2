@@ -158,7 +158,8 @@ function Inicio() {
                     <span>Comentarios visibles</span>
                     <strong>
                       {posts.reduce(
-                        (total, post) => total + post.visibleComments.length,
+                        (total, post) =>
+                          total + (post.visibleComments?.length ?? 0),
                         0
                       )}
                     </strong>

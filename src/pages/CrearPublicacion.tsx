@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import { useAuth } from "../context/AuthContext";
-import { createPost } from "../services/api";
+import { createPost, getUsers } from "../services/api";
 
 function CrearPublicacion() {
   const { user } = useAuth();
@@ -60,6 +60,14 @@ function CrearPublicacion() {
       return;
     }
 
+    const users = await getUsers();
+    const validUser = users.find((item) => item.id === user.id);
+
+    if (!validUser) {
+      setError("Tu usuario no está registrado en la API. Iniciá sesión nuevamente.");
+      return;
+    }
+
     const form = event.currentTarget;
 
     if (!form.checkValidity()) {
@@ -70,7 +78,8 @@ function CrearPublicacion() {
       setIsSubmitting(true);
       await createPost({
         description,
-        UserId: user.id,
+        userId: validUser.id,
+        tagIds: [],
         images,
         imageUrls,
       });

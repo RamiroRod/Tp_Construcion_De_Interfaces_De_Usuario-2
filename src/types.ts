@@ -11,13 +11,24 @@ export interface RegisterUserPayload {
   email: string;
 }
 
+export interface CreateCommentPayload {
+  content: string;
+  userId?: number;
+  postId?: number;
+}
+
+export interface CreatePostImagePayload {
+  url: string;
+  postId: number;
+}
+
 export interface CreatePostPayload {
-  title?: string;
   description: string;
-  UserId: number;
-  Tags?: number[];
-  images?: File[];
+  userId?: number;
+  tagIds?: number[];
+  UserId?: number;
   imageUrls?: string[];
+  images?: File[];
 }
 
 export interface Tag {
@@ -45,8 +56,6 @@ export interface Post {
   title?: string;
   description: string;
   UserId: number;
-  createdAt?: string;
-  updatedAt?: string;
   User?: User;
   Tags?: Tag[];
 }
