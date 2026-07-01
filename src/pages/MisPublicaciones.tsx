@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import PostCard from "../component/PostCard";
 import { useAuth } from "../context/AuthContext";
 import { getFeedPosts } from "../services/api";
@@ -7,6 +7,7 @@ import type { FeedPost } from "../types";
 
 function MisPublicaciones() {
   const { user, isAuthenticated } = useAuth();
+  const location = useLocation();
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -49,7 +50,7 @@ function MisPublicaciones() {
     return () => {
       ignore = true;
     };
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, location.state]);
 
   return (
     <section className="container py-5">

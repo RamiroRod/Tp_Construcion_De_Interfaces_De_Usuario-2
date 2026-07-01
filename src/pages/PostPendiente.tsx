@@ -33,6 +33,7 @@ function PostPendiente() {
         setPost(datosPost);
         setImageUrls(datosImagenes.map((image) => image.url));
         setComments(datosComentarios);
+
       } catch (err) {
         console.error(err);
       }

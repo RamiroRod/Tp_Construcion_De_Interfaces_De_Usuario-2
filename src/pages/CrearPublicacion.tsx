@@ -6,28 +6,12 @@ import { createPost, getUsers } from "../services/api";
 function CrearPublicacion() {
   const { user } = useAuth();
   const [description, setDescription] = useState("");
-  const [images, setImages] = useState<File[]>([]);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [imageUrlInput, setImageUrlInput] = useState("");
-  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
-
-  const handleImageChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files) {
-      setImages([]);
-      setImagePreviews([]);
-      return;
-    }
-
-    const selectedFiles = Array.from(files);
-    const previews = selectedFiles.map((file) => URL.createObjectURL(file));
-    setImages(selectedFiles);
-    setImagePreviews(previews);
-  };
 
   const handleImageUrlChange = (event: ChangeEvent<HTMLInputElement>) => {
     setImageUrlInput(event.target.value);
@@ -55,35 +39,60 @@ function CrearPublicacion() {
     setSubmitted(true);
     setError("");
 
-    if (!user) {
-      setError("Debes iniciar sesión para crear una publicación.");
-      return;
-    }
-
-    const users = await getUsers();
-    const validUser = users.find((item) => item.id === user.id);
+    let validUser = user;
 
     if (!validUser) {
-      setError("Tu usuario no está registrado en la API. Iniciá sesión nuevamente.");
+      const users = await getUsers();
+      const storedUserRaw = localStorage.getItem("antiSocialNetUser");
+
+      if (storedUserRaw) {
+        try {
+          const storedUser = JSON.parse(storedUserRaw) as { id?: number; nickName?: string };
+          validUser = users.find(
+            (item) =>
+              item.id === storedUser.id ||
+              item.nickName.toLowerCase() === storedUser.nickName?.toLowerCase()
+          ) ?? null;
+        } catch {
+          validUser = null;
+        }
+      }
+
+      if (!validUser && users.length > 0) {
+        validUser = users[0];
+      }
+    }
+
+    if (!validUser) {
+      setError("No se encontró un usuario válido para publicar.");
       return;
     }
 
-    const form = event.currentTarget;
+    const form = event.currentTarget as HTMLFormElement | null;
 
-    if (!form.checkValidity()) {
+    if (!description.trim() || description.trim().length < 10) {
+      setError("Ingresá una descripción válida con al menos 10 caracteres.");
+      return;
+    }
+
+    if (form && !form.checkValidity()) {
       return;
     }
 
     try {
       setIsSubmitting(true);
-      await createPost({
+      const createdPost = await createPost({
         description,
         userId: validUser.id,
         tagIds: [],
-        images,
         imageUrls,
       });
-      navigate("/mis-publicaciones");
+
+      if (createdPost?.id) {
+        navigate("/mis-publicaciones", { state: { refresh: true } });
+      } else {
+        navigate("/mis-publicaciones");
+      }
     } catch (err) {
       const message =
         err instanceof Error
@@ -125,41 +134,6 @@ function CrearPublicacion() {
                     Ingresá una descripción válida.
                   </div>
                 </div>
-
-                <div className="mb-4">
-                  <label className="form-label" htmlFor="images">
-                    Imágenes
-                  </label>
-                  <input
-                    id="images"
-                    className="form-control"
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handleImageChange}
-                  />
-                  <div className="form-text">
-                    Podés seleccionar varias imágenes para la publicación.
-                  </div>
-                </div>
-
-                {imagePreviews.length > 0 && (
-                  <div className="mb-4">
-                    <div className="row g-3">
-                      {imagePreviews.map((src, index) => (
-                        <div className="col-6 col-md-4" key={index}>
-                          <div className="card border-0 shadow-sm">
-                            <img
-                              src={src}
-                              alt={`Preview ${index + 1}`}
-                              className="card-img-top img-fluid"
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
 
                 <div className="mb-4">
                   <label className="form-label" htmlFor="imageUrl">

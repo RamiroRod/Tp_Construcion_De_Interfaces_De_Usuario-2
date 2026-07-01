@@ -91,7 +91,9 @@ export async function createPost(
   const body = {
     description: payload.description,
     userId: payload.userId ?? payload.UserId,
-    tagIds: payload.tagIds ?? [],
+    ...(Array.isArray(payload.tagIds) && payload.tagIds.length > 0
+      ? { tagIds: payload.tagIds }
+      : {}),
   };
 
   const response = await fetch(`${API_URL}/posts`, {
@@ -106,7 +108,42 @@ export async function createPost(
     throw new Error("Error al crear la publicación.");
   }
 
-  return response.json();
+  const createdPost = await response.json();
+
+  if (payload.imageUrls?.length || payload.images?.length) {
+    const imageUploads = [
+      ...(payload.imageUrls ?? [])
+        .filter(Boolean)
+        .map((url) =>
+          createPostImage({
+            url,
+            postId: createdPost.id,
+          }).catch(() => null)
+        ),
+      ...((payload.images ?? []).map((file) => {
+        return new Promise<void>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = async () => {
+            try {
+              await createPostImage({
+                url: reader.result as string,
+                postId: createdPost.id,
+              });
+              resolve();
+            } catch {
+              resolve();
+            }
+          };
+          reader.onerror = () => resolve();
+          reader.readAsDataURL(file);
+        });
+      })),
+    ];
+
+    await Promise.all(imageUploads);
+  }
+
+  return createdPost;
 }
 
 export async function getVisibleComments(postId: number): Promise<Comment[]> {
