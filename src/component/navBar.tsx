@@ -116,7 +116,7 @@ function NavBar() {
                 className="btn-google"
                 onClick={() => setMenuOpen(false)}
               >
-                Ver publicaciones
+                Empezar a chatear
               </Link>
             )}
           </div>

@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { getPostImages, getVisibleComments } from "../services/api";
-import type { Comment, FeedPost, PostImage } from "../types";
+import { getPostImages, getVisibleComments, getUsers } from "../services/api";
+import type { Comment, FeedPost, PostImage, User } from "../types";
 
 interface PostCardProps {
   post: FeedPost;
@@ -12,6 +12,7 @@ function PostCard({ post }: PostCardProps) {
   const [visibleComments, setVisibleComments] = useState<Comment[]>(
     post.visibleComments ?? []
   );
+  const [postUser, setPostUser] = useState<User | null>(post.User ?? post.user ?? null);
   const apiUrl = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
 
   useEffect(() => {
@@ -21,18 +22,28 @@ function PostCard({ post }: PostCardProps) {
     setVisibleComments(post.visibleComments ?? []);
 
     async function loadExtraData() {
-      const [loadedImages, loadedComments] = await Promise.all([
+      const [loadedImages, loadedComments, allUsers] = await Promise.all([
         (post.images?.length ?? 0) > 0
           ? Promise.resolve(post.images)
           : getPostImages(post.id).catch(() => []),
         post.visibleComments
           ? Promise.resolve(post.visibleComments)
           : getVisibleComments(post.id).catch(() => []),
+        getUsers().catch(() => []),
       ]);
 
       if (!ignore) {
         setImages(loadedImages ?? []);
         setVisibleComments(loadedComments ?? []);
+
+        // Buscar el usuario basado en el userId del post
+        const userId = post.UserId ?? post.userId;
+        if (userId && allUsers.length > 0) {
+          const foundUser = allUsers.find((u) => u.id === userId);
+          if (foundUser) {
+            setPostUser(foundUser);
+          }
+        }
       }
     }
 
@@ -41,7 +52,7 @@ function PostCard({ post }: PostCardProps) {
     return () => {
       ignore = true;
     };
-  }, [post.id, post.images, post.visibleComments]);
+  }, [post.id, post.images, post.visibleComments, post.userId, post.UserId]);
 
   const firstImage = images[0];
 
@@ -62,7 +73,6 @@ function PostCard({ post }: PostCardProps) {
     : null;
 
   const tags = post.Tags ?? post.tags ?? [];
-  const user = post.User ?? post.user;
 
   return (
     <article className="card border-0 shadow-sm mb-4">
@@ -78,7 +88,7 @@ function PostCard({ post }: PostCardProps) {
         <div className="d-flex justify-content-between align-items-start gap-3 mb-2">
           <div>
             <h2 className="h5 text-facebook mb-1">
-              {user?.nickName ?? "Usuario desconocido"}
+              {postUser?.nickName ?? "Usuario desconocido"}
             </h2>
 
             {post.createdAt && (
