@@ -84,6 +84,10 @@ export function getVisibleComments(postId: number) {
   return request<Comment[]>(`/comments/post/${postId}`);
 }
 
+export function getPostById(postId: number) {
+  return request<Post>(`/posts/${postId}`);
+}
+
 export async function createPost(
   payload: CreatePostPayload
 ): Promise<FeedPost> {
@@ -149,4 +153,17 @@ export async function getFeedPosts(): Promise<FeedPost[]> {
   );
 
   return postsWithExtraData;
+}
+
+export interface CreateCommentPayload {
+  PostId: number;
+  UserId: number;
+  content: string;
+}
+
+export function createComment(payload: CreateCommentPayload) {
+  return request<Comment>("/comments", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
