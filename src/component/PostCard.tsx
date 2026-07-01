@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { getPostImageUrls } from "../services/api";
-import type { FeedPost, PostImage } from "../types";
+import { getPostImages, getVisibleComments } from "../services/api";
+import type { Comment, FeedPost, PostImage } from "../types";
 
 interface PostCardProps {
   post: FeedPost;
@@ -9,32 +9,41 @@ interface PostCardProps {
 
 function PostCard({ post }: PostCardProps) {
   const [images, setImages] = useState<PostImage[]>(post.images ?? []);
+  const [visibleComments, setVisibleComments] = useState<Comment[]>(
+    post.visibleComments ?? []
+  );
   const apiUrl = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
 
   useEffect(() => {
     let ignore = false;
 
-    if (!post.images || post.images.length === 0) {
-      getPostImageUrls(post.id)
-        .then((result) => {
-          if (!ignore) {
-            setImages(result);
-          }
-        })
-        .catch(() => {
-          if (!ignore) {
-            setImages([]);
-          }
-        });
+    setImages(post.images ?? []);
+    setVisibleComments(post.visibleComments ?? []);
+
+    async function loadExtraData() {
+      const [loadedImages, loadedComments] = await Promise.all([
+        (post.images?.length ?? 0) > 0
+          ? Promise.resolve(post.images)
+          : getPostImages(post.id).catch(() => []),
+        post.visibleComments
+          ? Promise.resolve(post.visibleComments)
+          : getVisibleComments(post.id).catch(() => []),
+      ]);
+
+      if (!ignore) {
+        setImages(loadedImages ?? []);
+        setVisibleComments(loadedComments ?? []);
+      }
     }
+
+    loadExtraData();
 
     return () => {
       ignore = true;
     };
-  }, [post.id, post.images?.length ?? 0]);
+  }, [post.id, post.images, post.visibleComments]);
 
   const firstImage = images[0];
-  const visibleComments = post.visibleComments ?? [];
 
   const imageUrl = firstImage?.url
     ? (() => {
@@ -52,6 +61,9 @@ function PostCard({ post }: PostCardProps) {
       })()
     : null;
 
+  const tags = post.Tags ?? post.tags ?? [];
+  const user = post.User ?? post.user;
+
   return (
     <article className="card border-0 shadow-sm mb-4">
       {firstImage && imageUrl && (
@@ -66,10 +78,14 @@ function PostCard({ post }: PostCardProps) {
         <div className="d-flex justify-content-between align-items-start gap-3 mb-2">
           <div>
             <h2 className="h5 text-facebook mb-1">
-              {post.User?.nickName ?? "Usuario desconocido"}
+              {user?.nickName ?? "Usuario desconocido"}
             </h2>
 
-            
+            {post.createdAt && (
+              <small className="text-muted">
+                {new Date(post.createdAt).toLocaleDateString("es-AR")}
+              </small>
+            )}
           </div>
 
           <span className="badge bg-soft-blue text-facebook">
@@ -79,9 +95,9 @@ function PostCard({ post }: PostCardProps) {
 
         <p className="card-text mt-3">{post.description}</p>
 
-        {post.Tags && post.Tags.length > 0 && (
+        {tags.length > 0 && (
           <div className="d-flex flex-wrap gap-2 mb-3">
-            {post.Tags.map((tag) => (
+            {tags.map((tag) => (
               <span className="badge bg-light text-secondary border" key={tag.id}>
                 #{tag.name}
               </span>
@@ -95,8 +111,10 @@ function PostCard({ post }: PostCardProps) {
             <ul className="list-group list-group-flush">
               {visibleComments.slice(0, 3).map((comment) => (
                 <li className="list-group-item px-0 py-2" key={comment.id}>
-                  <strong>{comment.User?.nickName ?? "Anónimo"}:</strong>{" "}
-                  <span>{comment.content}</span>
+                  <strong>
+                    {comment.User?.nickName ?? comment.user?.nickName ?? "Anónimo"}
+                  </strong>
+                  : <span>{comment.content}</span>
                 </li>
               ))}
               {visibleComments.length > 3 && (

@@ -24,7 +24,7 @@ function MisPublicaciones() {
         if (ignore) return;
 
         setPosts(
-          feedPosts.filter((post) => post.UserId === user?.id)
+          feedPosts.filter((post) => (post.UserId ?? post.userId) === user?.id)
         );
       } catch (err) {
         if (ignore) return;
@@ -50,7 +50,7 @@ function MisPublicaciones() {
     return () => {
       ignore = true;
     };
-  }, [isAuthenticated, user, location.state]);
+  }, [isAuthenticated, user, location.key, location.state]);
 
   return (
     <section className="container py-5">

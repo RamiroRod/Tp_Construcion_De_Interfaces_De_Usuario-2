@@ -1,17 +1,58 @@
+import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useState, type ChangeEvent, type FormEvent } from "react";
 import { useAuth } from "../context/AuthContext";
-import { createPost, getUsers } from "../services/api";
+import { createPost, getTags } from "../services/api";
+import type { Tag } from "../types";
 
 function CrearPublicacion() {
   const { user } = useAuth();
+  const navigate = useNavigate();
+
   const [description, setDescription] = useState("");
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [imageUrlInput, setImageUrlInput] = useState("");
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
+
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
+  const [tagError, setTagError] = useState("");
+  const [isLoadingTags, setIsLoadingTags] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const navigate = useNavigate();
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadTags() {
+      try {
+        setIsLoadingTags(true);
+        setTagError("");
+        const data = await getTags();
+
+        if (!ignore) {
+          setTags(data);
+        }
+      } catch (err) {
+        if (!ignore) {
+          const message =
+            err instanceof Error
+              ? err.message
+              : "No se pudieron cargar las etiquetas.";
+          setTagError(message);
+        }
+      } finally {
+        if (!ignore) {
+          setIsLoadingTags(false);
+        }
+      }
+    }
+
+    loadTags();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const handleImageUrlChange = (event: ChangeEvent<HTMLInputElement>) => {
     setImageUrlInput(event.target.value);
@@ -20,6 +61,7 @@ function CrearPublicacion() {
   const addImageUrl = () => {
     const url = imageUrlInput.trim();
     if (!url) return;
+
     if (!/^https?:\/\//i.test(url)) {
       setError("Ingresá una URL válida que comience con http:// o https://");
       return;
@@ -34,65 +76,41 @@ function CrearPublicacion() {
     setImageUrls((current) => current.filter((_, idx) => idx !== index));
   };
 
+  const toggleTag = (tagId: number) => {
+    setSelectedTagIds((current) =>
+      current.includes(tagId)
+        ? current.filter((id) => id !== tagId)
+        : [...current, tagId]
+    );
+  };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSubmitted(true);
     setError("");
 
-    let validUser = user;
-
-    if (!validUser) {
-      const users = await getUsers();
-      const storedUserRaw = localStorage.getItem("antiSocialNetUser");
-
-      if (storedUserRaw) {
-        try {
-          const storedUser = JSON.parse(storedUserRaw) as { id?: number; nickName?: string };
-          validUser = users.find(
-            (item) =>
-              item.id === storedUser.id ||
-              item.nickName.toLowerCase() === storedUser.nickName?.toLowerCase()
-          ) ?? null;
-        } catch {
-          validUser = null;
-        }
-      }
-
-      if (!validUser && users.length > 0) {
-        validUser = users[0];
-      }
-    }
-
-    if (!validUser) {
-      setError("No se encontró un usuario válido para publicar.");
+    if (!user) {
+      setError("Debes iniciar sesión para crear una publicación.");
       return;
     }
 
-    const form = event.currentTarget as HTMLFormElement | null;
+    const form = event.currentTarget;
 
-    if (!description.trim() || description.trim().length < 10) {
-      setError("Ingresá una descripción válida con al menos 10 caracteres.");
-      return;
-    }
-
-    if (form && !form.checkValidity()) {
+    if (!form.checkValidity()) {
       return;
     }
 
     try {
       setIsSubmitting(true);
-      const createdPost = await createPost({
-        description,
-        userId: validUser.id,
-        tagIds: [],
+
+      await createPost({
+        description: description.trim(),
+        userId: user.id,
+        tagIds: selectedTagIds,
         imageUrls,
       });
 
-      if (createdPost?.id) {
-        navigate("/mis-publicaciones", { state: { refresh: true } });
-      } else {
-        navigate("/mis-publicaciones");
-      }
+      navigate("/mis-publicaciones", { state: { refreshAt: Date.now() } });
     } catch (err) {
       const message =
         err instanceof Error
@@ -131,8 +149,41 @@ function CrearPublicacion() {
                     minLength={10}
                   />
                   <div className="invalid-feedback">
-                    Ingresá una descripción válida.
+                    Ingresá una descripción válida de al menos 10 caracteres.
                   </div>
+                </div>
+
+                <div className="mb-4">
+                  <label className="form-label">Etiquetas</label>
+
+                  {isLoadingTags ? (
+                    <p className="text-muted mb-0">Cargando etiquetas...</p>
+                  ) : tagError ? (
+                    <div className="alert alert-warning mb-0" role="alert">
+                      {tagError}
+                    </div>
+                  ) : tags.length === 0 ? (
+                    <div className="alert alert-warning mb-0" role="alert">
+                      La API no devolvió etiquetas. Revisá que <code>GET /tags</code> tenga datos cargados.
+                    </div>
+                  ) : (
+                    <div className="d-flex flex-wrap gap-3">
+                      {tags.map((tag) => (
+                        <div className="form-check" key={tag.id}>
+                          <input
+                            className="form-check-input"
+                            type="checkbox"
+                            id={`tag-${tag.id}`}
+                            checked={selectedTagIds.includes(tag.id)}
+                            onChange={() => toggleTag(tag.id)}
+                          />
+                          <label className="form-check-label" htmlFor={`tag-${tag.id}`}>
+                            {tag.name}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="mb-4">
@@ -166,7 +217,7 @@ function CrearPublicacion() {
                     <div className="d-flex flex-column gap-2">
                       {imageUrls.map((url, index) => (
                         <div
-                          key={index}
+                          key={url}
                           className="d-flex align-items-center justify-content-between bg-light rounded p-2"
                         >
                           <span className="text-truncate" style={{ maxWidth: "85%" }}>

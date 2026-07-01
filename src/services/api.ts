@@ -13,203 +13,172 @@ import type {
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
 
-export async function getUsers(): Promise<User[]> {
-  const response = await fetch(`${API_URL}/users`);
+type ApiListResponse<T> = T[] | { data?: T[]; rows?: T[]; tags?: T[]; posts?: T[]; comments?: T[]; images?: T[] };
+type ApiItemResponse<T> = T | { data?: T; post?: T; comment?: T; image?: T };
 
-  if (!response.ok) {
-    throw new Error("Error al obtener los usuarios.");
-  }
+function normalizeList<T>(value: ApiListResponse<T>): T[] {
+  if (Array.isArray(value)) return value;
 
-  return response.json();
+  return (
+    value.data ??
+    value.rows ??
+    value.tags ??
+    value.posts ??
+    value.comments ??
+    value.images ??
+    []
+  );
 }
 
-export async function getUserById(id: number): Promise<User> {
-  const response = await fetch(`${API_URL}/users/${id}`);
-
-  if (!response.ok) {
-    throw new Error(`Error al obtener el usuario con id ${id}.`);
+function normalizeItem<T>(value: ApiItemResponse<T>): T {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const objectValue = value as { data?: T; post?: T; comment?: T; image?: T };
+    return objectValue.data ?? objectValue.post ?? objectValue.comment ?? objectValue.image ?? (value as T);
   }
 
-  return response.json();
+  return value as T;
 }
 
-export async function createUser(
-  payload: RegisterUserPayload
-): Promise<User> {
-  const response = await fetch(`${API_URL}/users`, {
-    method: "POST",
+async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  const response = await fetch(`${API_URL}${endpoint}`, {
     headers: {
       "Content-Type": "application/json",
+      ...(options?.headers ?? {}),
     },
-    body: JSON.stringify(payload),
+    ...options,
   });
 
+  const data = await response.json().catch(() => null);
+
   if (!response.ok) {
-    throw new Error("Error al crear el usuario.");
+    throw new Error(data?.error || data?.message || "Ocurrió un error inesperado.");
   }
 
-  return response.json();
+  return data as T;
 }
 
-export async function getPosts(): Promise<FeedPost[]> {
-  const response = await fetch(`${API_URL}/posts`);
+export function getUsers(): Promise<User[]> {
+  return request<User[]>("/users");
+}
 
-  if (!response.ok) {
-    throw new Error("Error al obtener las publicaciones.");
-  }
-
-  return response.json();
+export function createUser(payload: RegisterUserPayload): Promise<User> {
+  return request<User>("/users", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function getTags(): Promise<Tag[]> {
-  const response = await fetch(`${API_URL}/tags`);
-
-  if (!response.ok) {
-    throw new Error("Error al obtener los tags.");
-  }
-
-  return response.json();
+  const data = await request<ApiListResponse<Tag>>("/tags");
+  return normalizeList<Tag>(data);
 }
 
-export async function getFeedPosts(): Promise<FeedPost[]> {
-  return getPosts();
+export async function getPosts(): Promise<Post[]> {
+  const data = await request<ApiListResponse<Post>>("/posts");
+  return normalizeList<Post>(data);
 }
 
-export async function getPostById(id: number): Promise<Post> {
-  const response = await fetch(`${API_URL}/posts/${id}`);
-
-  if (!response.ok) {
-    throw new Error(`Error al obtener la publicación con id ${id}.`);
-  }
-
-  return response.json();
+export async function getPostById(postId: number): Promise<Post> {
+  const data = await request<ApiItemResponse<Post>>(`/posts/${postId}`);
+  return normalizeItem<Post>(data);
 }
 
-export async function createPost(
-  payload: CreatePostPayload
-): Promise<Post> {
-  const body = {
-    description: payload.description,
-    userId: payload.userId ?? payload.UserId,
-    ...(Array.isArray(payload.tagIds) && payload.tagIds.length > 0
-      ? { tagIds: payload.tagIds }
-      : {}),
-  };
-
-  const response = await fetch(`${API_URL}/posts`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
-
-  if (!response.ok) {
-    throw new Error("Error al crear la publicación.");
-  }
-
-  const createdPost = await response.json();
-
-  if (payload.imageUrls?.length || payload.images?.length) {
-    const imageUploads = [
-      ...(payload.imageUrls ?? [])
-        .filter(Boolean)
-        .map((url) =>
-          createPostImage({
-            url,
-            postId: createdPost.id,
-          }).catch(() => null)
-        ),
-      ...((payload.images ?? []).map((file) => {
-        return new Promise<void>((resolve) => {
-          const reader = new FileReader();
-          reader.onload = async () => {
-            try {
-              await createPostImage({
-                url: reader.result as string,
-                postId: createdPost.id,
-              });
-              resolve();
-            } catch {
-              resolve();
-            }
-          };
-          reader.onerror = () => resolve();
-          reader.readAsDataURL(file);
-        });
-      })),
-    ];
-
-    await Promise.all(imageUploads);
-  }
-
-  return createdPost;
+export async function getPostImages(postId: number): Promise<PostImage[]> {
+  const data = await request<ApiListResponse<PostImage>>(`/postimages/post/${postId}`);
+  return normalizeList<PostImage>(data);
 }
+
+export const getImagenPostId = getPostImages;
+export const getPostImageUrls = getPostImages;
 
 export async function getVisibleComments(postId: number): Promise<Comment[]> {
-  const response = await fetch(`${API_URL}/comments/post/${postId}`);
-
-  if (!response.ok) {
-    throw new Error(`Error al obtener los comentarios del post ${postId}.`);
-  }
-
-  return response.json();
-}
-
-export async function createComment(
-  payload: CreateCommentPayload
-): Promise<Comment> {
-  const body = {
-    content: payload.content,
-    userId: payload.userId,
-    postId: payload.postId,
-  };
-
-  const response = await fetch(`${API_URL}/comments`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
-
-  if (!response.ok) {
-    throw new Error("Error al crear el comentario.");
-  }
-
-  return response.json();
-}
-
-export async function getPostImageUrls(postId: number): Promise<PostImage[]> {
-  const response = await fetch(`${API_URL}/postimages/post/${postId}`);
-
-  if (!response.ok) {
-    throw new Error(`Error al obtener las imágenes del post ${postId}.`);
-  }
-
-  return response.json();
+  const data = await request<ApiListResponse<Comment>>(`/comments/post/${postId}`);
+  return normalizeList<Comment>(data);
 }
 
 export async function createPostImage(
   payload: CreatePostImagePayload
 ): Promise<PostImage> {
-  const body = {
-    url: payload.url,
-    postId: payload.postId,
-  };
-
-  const response = await fetch(`${API_URL}/postimages`, {
+  const data = await request<ApiItemResponse<PostImage>>("/postimages", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
+    body: JSON.stringify({
+      url: payload.url,
+      postId: payload.postId,
+    }),
   });
 
-  if (!response.ok) {
-    throw new Error("Error al crear la imagen del post.");
-  }
-
-  return response.json();
+  return normalizeItem<PostImage>(data);
 }
 
+export async function createPost(payload: CreatePostPayload): Promise<FeedPost> {
+  const data = await request<ApiItemResponse<Post>>("/posts", {
+    method: "POST",
+    body: JSON.stringify({
+      description: payload.description,
+      userId: payload.userId,
+      tagIds: payload.tagIds,
+    }),
+  });
+
+  const post = normalizeItem<Post>(data);
+
+  const urls = (payload.imageUrls ?? [])
+    .map((url) => url.trim())
+    .filter(Boolean);
+
+  if (urls.length > 0) {
+    await Promise.all(
+      urls.map((url) =>
+        createPostImage({
+          url,
+          postId: post.id,
+        })
+      )
+    );
+  }
+
+  const [images, visibleComments] = await Promise.all([
+    getPostImages(post.id).catch(() => []),
+    getVisibleComments(post.id).catch(() => []),
+  ]);
+
+  return {
+    ...post,
+    images,
+    visibleComments,
+  };
+}
+
+export async function createComment(
+  payload: CreateCommentPayload
+): Promise<Comment> {
+  const data = await request<ApiItemResponse<Comment>>("/comments", {
+    method: "POST",
+    body: JSON.stringify({
+      content: payload.content,
+      userId: payload.userId,
+      postId: payload.postId,
+    }),
+  });
+
+  return normalizeItem<Comment>(data);
+}
+
+export async function getFeedPosts(): Promise<FeedPost[]> {
+  const posts = await getPosts();
+
+  return Promise.all(
+    posts.map(async (post) => {
+      const [images, visibleComments] = await Promise.all([
+        getPostImages(post.id).catch(() => []),
+        getVisibleComments(post.id).catch(() => []),
+      ]);
+
+      return {
+        ...post,
+        images,
+        visibleComments,
+      };
+    })
+  );
+}

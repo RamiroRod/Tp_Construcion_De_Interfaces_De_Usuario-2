@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import PostCard from "../component/PostCard";
 import { useAuth } from "../context/AuthContext";
 import { getFeedPosts } from "../services/api";
@@ -7,6 +7,7 @@ import type { FeedPost } from "../types";
 
 function Inicio() {
   const { isAuthenticated, user } = useAuth();
+  const location = useLocation();
 
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -46,7 +47,12 @@ function Inicio() {
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [location.key]);
+
+  const totalVisibleComments = posts.reduce(
+    (total, post) => total + (post.visibleComments?.length ?? 0),
+    0
+  );
 
   return (
     <div className="inicio">
@@ -91,7 +97,7 @@ function Inicio() {
                 <div className="card-body p-4">
                   <h2 className="h5 text-facebook fw-bold">Sobre nosotros</h2>
                   <p className="text-muted mb-0">
-                    Unahur Anti-Social Net es una red social en la cual los usuarios pueden compartir 
+                    Unahur Anti-Social Net es una red social en la cual los usuarios pueden compartir
                     sus pensamientos y experiencias.
                   </p>
                 </div>
@@ -156,13 +162,7 @@ function Inicio() {
 
                   <li className="list-group-item px-0 d-flex justify-content-between">
                     <span>Comentarios visibles</span>
-                    <strong>
-                      {posts.reduce(
-                        (total, post) =>
-                          total + (post.visibleComments?.length ?? 0),
-                        0
-                      )}
-                    </strong>
+                    <strong>{totalVisibleComments}</strong>
                   </li>
 
                   <li className="list-group-item px-0 d-flex justify-content-between">
@@ -172,8 +172,6 @@ function Inicio() {
                 </ul>
               </div>
             </div>
-
-            
           </aside>
         </div>
       </section>
