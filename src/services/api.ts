@@ -91,7 +91,7 @@ export function getPostById(postId: number) {
 export async function createPost(
   payload: CreatePostPayload
 ): Promise<FeedPost> {
-  // map client payload keys to backend expectations: userId and tagIds
+  
   const body = {
     description: payload.description,
     userId: payload.UserId,
@@ -164,6 +164,10 @@ export interface CreateCommentPayload {
 export function createComment(payload: CreateCommentPayload) {
   return request<Comment>("/comments", {
     method: "POST",
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      postId: payload.PostId,
+      userId: payload.UserId,
+      content: payload.content,
+    }),
   });
 }
