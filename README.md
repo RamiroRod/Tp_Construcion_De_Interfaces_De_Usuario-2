@@ -4,14 +4,14 @@ Este proyecto consiste en el desarrollo del frontend de una red social llamada "
 La aplicación permite que los usuarios se autentiquen para acceder a la plataforma, donde pueden navegar por las publicaciones, crear sus propias publicaciones e interactuar con el contenido de otros usuarios mediante comentarios.
 
 Como ejecutarlo en local:
-    Descargar y descomprimir la API
-    Abrir una terminal dentro de la carpeta de la API
-    Ejecutar 'npm install'
-    Ejecutar 'npm run dev'
-    Clonar el repositorio del proyecto
-    Abrir una terminal
-    Ejecutar 'npm run dev' en la terminal
-    Abrir el localhost en el navegador
+    -Descargar y descomprimir la API
+    -Abrir una terminal dentro de la carpeta de la API
+    -Ejecutar 'npm install'
+    -Ejecutar 'npm run dev'
+    -Clonar el repositorio del proyecto
+    -Abrir una terminal
+    -Ejecutar 'npm run dev' en la terminal
+    -Abrir el localhost en el navegador
 
 API utilizada:
 https://github.com/lucasfigarola/backend-api
