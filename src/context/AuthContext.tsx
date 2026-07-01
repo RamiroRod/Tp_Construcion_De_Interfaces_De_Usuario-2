@@ -45,7 +45,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error("La contraseña ingresada no es válida.");
     }
 
-    const users = await getUsers();
+    let users;
+    try {
+      users = await getUsers();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      
+      if (
+        errorMessage.includes("Failed to fetch") ||
+        err instanceof TypeError
+      ) {
+        throw new Error("Error de conexión con la base de datos. Intenta más tarde.");
+      }
+      
+      throw err;
+    }
 
     const foundUser = users.find(
       (item) => item.nickName.toLowerCase() === nickName.trim().toLowerCase()

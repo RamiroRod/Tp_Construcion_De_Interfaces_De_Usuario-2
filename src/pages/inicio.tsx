@@ -100,7 +100,7 @@ function Inicio() {
       } catch (err) {
         const message =
           err instanceof Error
-            ? err.message
+            ? "Error en la base de datos: " + err.message
             : "No se pudieron cargar las publicaciones.";
 
         if (!ignore) {

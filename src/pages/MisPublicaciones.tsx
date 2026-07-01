@@ -30,7 +30,7 @@ function MisPublicaciones() {
         if (ignore) return;
         setError(
           err instanceof Error
-            ? err.message
+            ? "Error en la base de datos: " + err.message
             : "No se pudieron cargar tus publicaciones."
         );
       } finally {

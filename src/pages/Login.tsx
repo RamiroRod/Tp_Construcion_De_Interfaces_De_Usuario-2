@@ -41,7 +41,7 @@ function Login() {
       navigate(state?.from?.pathname || "/", { replace: true });
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "No se pudo iniciar sesión.";
+        err instanceof Error ?  err.message : "No se pudo iniciar sesión.";
 
       setError(message);
     } finally {

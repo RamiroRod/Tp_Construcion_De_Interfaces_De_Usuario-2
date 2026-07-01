@@ -114,7 +114,7 @@ function CrearPublicacion() {
     } catch (err) {
       const message =
         err instanceof Error
-          ? err.message
+          ? "Error en la base de datos: " + err.message
           : "No se pudo crear la publicación.";
       setError(message);
     } finally {
